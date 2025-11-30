@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-service
+  labels:
+    app: agent-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agent-service
+  template:
+    metadata:
+      labels:
+        app: agent-service
+    spec:
+      serviceAccountName: fastapi-agent
+      containers:
+      - name: agent-service
+        image: {{ .Values.agentService.image }}:{{ .Values.agentService.tag }}
+        ports:
+        - containerPort: 8000
+        env:
+        # Google Cloud credentials environment variable
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: "/etc/gcp/credentials.json"
+        # Gemini API key from secret
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fastapi-agent-secrets
+              key: gemini-api-key
+        # Google App OAuth2 credentials from secret
+        - name: GOOGLE_APP_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: fastapi-agent-secrets
+              key: google-app-client-id
+        - name: GOOGLE_APP_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fastapi-agent-secrets
+              key: google-app-client-secret
+        # Database connection string
+        - name: SQL_URI
+          value: "postgresql://{{ .Values.database.username }}:{{ .Values.database.password }}@{{ .Values.database.host }}:{{ .Values.database.port }}/{{ .Values.database.name }}"
+        # Redis URL from secret
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: fastapi-agent-secrets
+              key: redis-url
+        # Other environment variables from values
+        {{- if .Values.agentService.env }}
+        {{- range $key, $value := .Values.agentService.env }}
+        - name: {{ $key }}
+          value: "{{ $value }}"
+        {{- end }}
+        {{- end }}
+        volumeMounts:
+        # Mount Google Cloud service account credentials
+        - name: gcp-credentials
+          mountPath: /etc/gcp
+          readOnly: true
+      volumes:
+      # Volume for Google Cloud credentials
+      - name: gcp-credentials
+        secret:
+          secretName: fastapi-agent-secrets
+          items:
+          - key: credentials.json
+            path: credentials.json

@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# todos
+todo.md
+
+# Terraform sensitive files
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+
+# Sops
+*key.txt

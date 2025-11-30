@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "FastAPI Weather Agent",
+    "description": "API collection for the FastAPI Weather and Time Agent application",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Session",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"test-session-456\",\n  \"user_id\": \"test-user-123\",\n  \"app_name\": \"weather-time-app\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/create_session",
+          "host": ["{{base_url}}"],
+          "path": ["create_session"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Run Agent (Weather Query)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"app_name\": \"weather-time-app\",\n  \"user_id\": \"test-user-123\",\n  \"session_id\": \"test-session-456\",\n  \"new_message\": \"What is the weather like today?\",\n  \"streaming\": true,\n  \"state_delta\": null\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/run_sse",
+          "host": ["{{base_url}}"],
+          "path": ["run_sse"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Run Agent (Time Query)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"app_name\": \"weather-time-app\",\n  \"user_id\": \"test-user-123\",\n  \"session_id\": \"test-session-456\",\n  \"new_message\": \"What time is it now?\",\n  \"streaming\": true,\n  \"state_delta\": null\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/run_sse",
+          "host": ["{{base_url}}"],
+          "path": ["run_sse"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Run Agent (General Question)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"app_name\": \"weather-time-app\",\n  \"user_id\": \"test-user-123\",\n  \"session_id\": \"test-session-456\",\n  \"new_message\": \"Hello, how can you help me?\",\n  \"streaming\": true,\n  \"state_delta\": null\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/run_sse",
+          "host": ["{{base_url}}"],
+          "path": ["run_sse"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "OAuth - Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/oauth/health",
+          "host": ["{{base_url}}"],
+          "path": ["oauth", "health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "OAuth - Callback (Simulate Success)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/oauth/callback?code={{oauth_code}}&state={{oauth_state}}",
+          "host": ["{{base_url}}"],
+          "path": ["oauth", "callback"],
+          "query": [
+            {
+              "key": "code",
+              "value": "{{oauth_code}}",
+              "description": "Authorization code from OAuth provider"
+            },
+            {
+              "key": "state",
+              "value": "{{oauth_state}}",
+              "description": "State parameter from the auth request"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "OAuth - Callback (Simulate Error)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/oauth/callback?error=access_denied&error_description=User%20denied%20access",
+          "host": ["{{base_url}}"],
+          "path": ["oauth", "callback"],
+          "query": [
+            {
+              "key": "error",
+              "value": "access_denied",
+              "description": "Error code from OAuth provider"
+            },
+            {
+              "key": "error_description",
+              "value": "User denied access",
+              "description": "Human-readable error description"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://0.0.0.0:8080",
+      "type": "string"
+    }
+  ]
+}

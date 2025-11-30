@@ -1,0 +1,19 @@
+environments:
+  default:
+    secrets:
+      - secrets.yaml
+---
+repositories:
+  - name: stable
+    url: https://charts.helm.sh/stable
+
+releases:
+  - name: fastapi-agent
+    namespace: default
+    chart: ./charts/fastapi_agent
+    values:
+      - fastapi_agent/values.yaml.gotmpl
+    secrets:
+      - secrets.yaml
+    wait: true
+    timeout: 300

@@ -1,0 +1,31 @@
+# FastAPI Agent Service Configuration
+agentService:
+  image: "053132875787.dkr.ecr.us-west-2.amazonaws.com/fastapi-agent"
+  tag: "latest"
+  env:
+    GOOGLE_CLOUD_PROJECT: "agents-playground-474510"
+    GOOGLE_CLOUD_LOCATION: "us-central1"
+    GOOGLE_GENAI_USE_VERTEXAI: "True"
+    FASTAPI_HOST: "0.0.0.0"
+    FASTAPI_PORT: "8000"
+    FASTAPI_LOG_LEVEL: "info"
+    OAUTH_REDIRECT_URI: "https://agent-playground.online/oauth/callback"
+
+# Database configuration (fixed DNS name)
+database:
+  host: "db.agent-playground.online"
+  port: "5432"
+  name: "fastapi_agent_db"
+  username: {{ .Values.DB_USERNAME | quote }}
+  password: {{ .Values.DB_PASSWORD | quote }}
+
+# Secrets (will be populated by Helmfile from secrets.yaml)
+secrets:
+  geminiApiKey: {{ .Values.GEMINI_API_KEY | quote }}
+  googleServiceAccount: {{ .Values.GOOGLE_APP_SA | quote }}
+  googleAppClientId: {{ .Values.GOOGLE_APP_CLIENT_ID | quote }}
+  googleAppClientSecret: {{ .Values.GOOGLE_APP_CLIENT_SECRET | quote }}
+  redisUrl: {{ .Values.REDIS_URL | quote }}
+  dbUsername: {{ .Values.DB_USERNAME | quote }}
+  dbPassword: {{ .Values.DB_PASSWORD | quote }}
+

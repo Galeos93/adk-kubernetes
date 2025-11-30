@@ -1,0 +1,43 @@
+{
+  "id": "fastapi-agent-env",
+  "name": "FastAPI Agent Environment",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://0.0.0.0:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "user_id",
+      "value": "test-user-123",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "session_id",
+      "value": "test-session-456",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "app_name",
+      "value": "weather-time-app",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "oauth_code",
+      "value": "test_authorization_code_12345",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "oauth_state",
+      "value": "test_state_abc123xyz",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
