@@ -214,6 +214,10 @@ todo.md
 *.tfstate.*
 *.tfvars
 .terraform/
+.terraform.lock.hcl
 
 # Sops
 *key.txt
+
+# VS code
+.vscode/

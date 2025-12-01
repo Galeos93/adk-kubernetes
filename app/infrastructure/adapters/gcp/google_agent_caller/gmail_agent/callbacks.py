@@ -41,12 +41,13 @@ class BaseGmailCallback:
 
     def get_persistent_credential_key(
             self,
-            credential_key: str,
+            credential_key: str, # This is not same across subprocesses
             session_id: str,
-            user_id: str,
+            session_user_id: str,
+            gmail_user_id: str,
     ) -> str:
-        uuid = session_id + self._session_user_separator + user_id
-        credential_key_redis = f"{credential_key}{self._uuid_separator}{uuid}"
+        uuid = session_id + self._session_user_separator + session_user_id + self._session_user_separator + gmail_user_id
+        credential_key_redis = f"{uuid}"
         return credential_key_redis
     
     def get_session_user_from_persistent_credential_key(
@@ -59,8 +60,8 @@ class BaseGmailCallback:
 
 
 class GmailToolBeforeCallback(BaseGmailCallback):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, auth_scheme, auth_credential):
+        super().__init__(auth_scheme, auth_credential)
         self._last_connection_input_user_id = None
 
     def _delete_stale_credential(
@@ -68,9 +69,13 @@ class GmailToolBeforeCallback(BaseGmailCallback):
             tool_context: ToolContext,
             connector_input_user_id: str,
     ):
+        if self._last_connection_input_user_id is None:
+            # no previous user_id, therefore, no stale credential to delete
+            return
+
         session = tool_context.session
         session_id = session.id
-        user_id = session.user_id
+        session_user_id = session.user_id
 
         credential_key = self.get_credential_key_from_auth_scheme_and_credential(
             self._auth_scheme,
@@ -79,10 +84,11 @@ class GmailToolBeforeCallback(BaseGmailCallback):
         credential_key_redis = self.get_persistent_credential_key(
             credential_key,
             session_id,
-            user_id,
+            session_user_id,
+            self._last_connection_input_user_id,
         )
 
-        if self._last_connection_input_user_id and self._last_connection_input_user_id != connector_input_user_id:
+        if self._last_connection_input_user_id != connector_input_user_id:
             # Delete stale credential from tool context state
             if credential_key in tool_context.state:
                 tool_context.state[credential_key] = None
@@ -104,15 +110,18 @@ class GmailToolBeforeCallback(BaseGmailCallback):
             self._auth_credential,
         )
         duplicated_key = temp_credential_key.replace("temp:adk_", "") == credential_key.replace("_existing_exchanged_credential", "")
-        temp_credential_not_none = tool_context.state.get(temp_credential_key) is not None
+        temp_credential_is_none = tool_context.state.get(temp_credential_key) is None
+
+        if temp_credential_is_none:
+            return
 
         credential_value = tool_context.state.get(
-            credential_key).get("oauth2", {}).get("access_token")
+            credential_key, {}).get("oauth2", {}).get("access_token")
         temp_credential_value = tool_context.state.get(
             temp_credential_key).model_dump().get(
                 "oauth2", {}).get("access_token")
 
-        if duplicated_key and temp_credential_not_none and credential_value != temp_credential_value:
+        if duplicated_key and credential_value != temp_credential_value:
             # This means the user completed Oauth2. Delete the state again
             if tool_context.state.get(credential_key) is not None:
                 tool_context.state[credential_key] = None
@@ -133,6 +142,9 @@ class GmailToolBeforeCallback(BaseGmailCallback):
         if connector_input_user_id is not None:
             self._delete_stale_credential(tool_context, connector_input_user_id)
             self._last_connection_input_user_id = connector_input_user_id
+        else:
+            # Cannot load credential from Redis without userId
+            return
 
         credential_key = self.get_credential_key_from_auth_scheme_and_credential(
             self._auth_scheme,
@@ -143,6 +155,7 @@ class GmailToolBeforeCallback(BaseGmailCallback):
             credential_key,
             tool_context.session.id,
             tool_context.session.user_id,
+            connector_input_user_id,
         )
 
         if tool_context.state.get(credential_key) is None:
@@ -161,6 +174,11 @@ class GmailToolAfterCallback(BaseGmailCallback):
         session_id = session.id
         user_id = session.user_id
 
+        connector_input_user_id = args.get("connector_input_payload", {}).get("Path parameters", {}).get("userId")
+
+        if connector_input_user_id is None:
+            return tool_response
+
         credential_key = self.get_credential_key_from_auth_scheme_and_credential(
             self._auth_scheme,
             self._auth_credential,
@@ -169,6 +187,7 @@ class GmailToolAfterCallback(BaseGmailCallback):
             credential_key,
             session_id,
             user_id,
+            connector_input_user_id,
         )
 
         credential = tool_context.state.get(credential_key)

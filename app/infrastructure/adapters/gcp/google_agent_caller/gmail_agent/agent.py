@@ -1,5 +1,6 @@
 import json
 import os
+import copy  # Add this import for deep copying
 
 if os.environ.get('DISABLE_IPV6', "True").lower() == "true":
     import requests
@@ -95,15 +96,23 @@ connector_tool = ApplicationIntegrationToolset(
 
 # --- Agent Configuration ---
 # Configure and create the main LLM Agent.
-root_agent = LlmAgent(
-    model='gemini-2.0-flash',
-    name='enterprise_assistant',
-    instruction='Help user integrate with multiple enterprise systems, including retrieving user information which may require authentication.',
-    tools=[connector_tool],
-    before_tool_callback=BeforeToolCallback(callbacks={
-        rest_tool.name: GmailToolBeforeCallback() for rest_tool in connector_tool._tools
-    }),
-    after_tool_callback=AfterToolCallback(callbacks={
-        rest_tool.name: GmailToolAfterCallback() for rest_tool in connector_tool._tools
-    })
-)
+def load_agent():
+    # Create deep copies of authentication objects to avoid shared references
+    auth_scheme_copy = copy.deepcopy(AUTH_SCHEME)
+    auth_credential_copy = copy.deepcopy(AUTH_CREDENTIAL)
+
+    root_agent = LlmAgent(
+        model='gemini-2.0-flash',
+        name='enterprise_assistant',
+        instruction='Help user integrate with multiple enterprise systems, including retrieving user information which may require authentication.',
+        tools=[connector_tool],
+        before_tool_callback=BeforeToolCallback(callbacks={
+            tool.name: GmailToolBeforeCallback(auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy)
+            for tool in connector_tool._tools
+        }),
+        after_tool_callback=AfterToolCallback(callbacks={
+            tool.name: GmailToolAfterCallback(auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy)
+            for tool in connector_tool._tools
+        })
+    )
+    return root_agent

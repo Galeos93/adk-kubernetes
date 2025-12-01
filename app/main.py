@@ -15,8 +15,7 @@ from vyper import v
 
 from application.use_cases.chat_with_agent import ChatWithAgentUseCase
 from application.use_cases.session_register import RegisterSessionUseCase
-# from infrastructure.adapters.gcp.google_agent_caller.weather_agent.agent import root_agent
-from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.agent import root_agent
+from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.agent import load_agent
 from infrastructure.adapters.fastapi.create_session_api import CreateSessionAPIImpl
 from infrastructure.adapters.fastapi.fastapi import AppBuilder
 from infrastructure.adapters.fastapi.health_api import HealthAPI
@@ -84,6 +83,9 @@ def load_vyper_config():
 
 def configure_app():
     """Configure the FastAPI app with all dependencies using clean architecture."""
+    # Load the root agent
+    root_agent = load_agent()
+
     # Create Google ADK services
     session_service = DatabaseSessionService(v.get("sql.uri"))
     memory_service = None  # Set to None for now
