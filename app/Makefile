@@ -127,8 +127,7 @@ docker-run-dev: ## Run Docker container in development mode
 	@echo "🐳 Running Docker container in development mode..."
 	docker run --user root --env-file .env -v ~/.config/gcloud/:/app/.config/gcloud/ \
 	-e GOOGLE_APPLICATION_CREDENTIALS=/app/.config/gcloud/application_default_credentials.json \
-	-v $(PWD)/.venv/lib/python3.11/site-packages/google:/usr/local/lib/python3.11/site-packages/google \
-	-p 8080:80 fastapi-agent:latest
+	-p 8080:8080 fastapi-agent:latest
 
 # Development workflow helpers
 watch-test: ## Run tests in watch mode (requires pytest-watch)
