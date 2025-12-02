@@ -1,4 +1,5 @@
 """Application interface for chat with agent use case."""
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 

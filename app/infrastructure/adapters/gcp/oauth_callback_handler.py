@@ -1,58 +1,58 @@
 """Minimal OAuth2 callback handler for authentication flow."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict
 
+import redis
 from fastapi import Request
 from fastapi.responses import HTMLResponse
-import redis
 from vyper import v
 
 
 class OAuthCallbackHandlerBase(ABC):
     """Abstract base class for OAuth2 callback handlers."""
-    
+
     @abstractmethod
     async def handle_callback(self, request: Request) -> HTMLResponse:
         """Handle OAuth2 callback from authentication provider.
-        
+
         Parameters
         ----------
         request : Request
             FastAPI request containing code and state parameters.
-            
+
         Returns
         -------
         HTMLResponse
             Response to be sent back to the user.
         """
         pass
-    
+
     @abstractmethod
     def get_code(self, state: str) -> str | None:
         """Retrieve authorization code for a given state.
-        
+
         Parameters
         ----------
         state : str
             The state parameter to look up.
-            
+
         Returns
         -------
         str | None
             Authorization code if found, None otherwise.
         """
         pass
-    
+
     @abstractmethod
     def consume_code(self, state: str) -> str | None:
         """Retrieve and remove authorization code (single use).
-        
+
         Parameters
         ----------
         state : str
             The state parameter to look up.
-            
+
         Returns
         -------
         str | None
@@ -64,22 +64,23 @@ class OAuthCallbackHandlerBase(ABC):
 @dataclass
 class InMemoryOAuthCallbackHandler(OAuthCallbackHandlerBase):
     """Handles OAuth2 callbacks and stores authorization codes.
-    
+
     Parameters
     ----------
     auth_codes : Dict[str, str]
         In-memory storage for authorization codes keyed by state.
     """
-    auth_codes: Dict[str, str] = field(default_factory=dict)
-    
+
+    auth_codes: dict[str, str] = field(default_factory=dict)
+
     async def handle_callback(self, request: Request) -> HTMLResponse:
         """Handle OAuth2 callback from authentication provider.
-        
+
         Parameters
         ----------
         request : Request
             FastAPI request containing code and state parameters.
-            
+
         Returns
         -------
         HTMLResponse
@@ -88,7 +89,7 @@ class InMemoryOAuthCallbackHandler(OAuthCallbackHandlerBase):
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-        
+
         if error:
             return HTMLResponse(
                 content=f"""
@@ -99,9 +100,9 @@ class InMemoryOAuthCallbackHandler(OAuthCallbackHandlerBase):
                     </body>
                 </html>
                 """,
-                status_code=400
+                status_code=400,
             )
-        
+
         if not code or not state:
             return HTMLResponse(
                 content="""
@@ -112,11 +113,11 @@ class InMemoryOAuthCallbackHandler(OAuthCallbackHandlerBase):
                     </body>
                 </html>
                 """,
-                status_code=400
+                status_code=400,
             )
-        
+
         self.auth_codes[state] = code
-        
+
         return HTMLResponse(
             content="""
             <html>
@@ -128,30 +129,30 @@ class InMemoryOAuthCallbackHandler(OAuthCallbackHandlerBase):
             </html>
             """
         )
-    
+
     def get_code(self, state: str) -> str | None:
         """Retrieve authorization code for a given state.
-        
+
         Parameters
         ----------
         state : str
             The state parameter to look up.
-            
+
         Returns
         -------
         str | None
             Authorization code if found, None otherwise.
         """
         return self.auth_codes.get(state)
-    
+
     def consume_code(self, state: str) -> str | None:
         """Retrieve and remove authorization code (single use).
-        
+
         Parameters
         ----------
         state : str
             The state parameter to look up.
-            
+
         Returns
         -------
         str | None
@@ -170,7 +171,8 @@ class RedisOAuthCallbackHandler(OAuthCallbackHandlerBase):
         Redis client instance for storing authorization codes.
 
     """
-    ttl : int = 300  # Time to live for codes in seconds
+
+    ttl: int = 300  # Time to live for codes in seconds
 
     def __post_init__(self):
         self.redis_client = redis.Redis.from_url(v.get("redis.url"))
@@ -202,7 +204,7 @@ class RedisOAuthCallbackHandler(OAuthCallbackHandlerBase):
                     </body>
                 </html>
                 """,
-                status_code=400
+                status_code=400,
             )
 
         if not code or not state:
@@ -215,7 +217,7 @@ class RedisOAuthCallbackHandler(OAuthCallbackHandlerBase):
                     </body>
                 </html>
                 """,
-                status_code=400
+                status_code=400,
             )
 
         self.redis_client.set(state, code, ex=self.ttl)  # Set expiration time
@@ -247,7 +249,7 @@ class RedisOAuthCallbackHandler(OAuthCallbackHandlerBase):
 
         """
         code = self.redis_client.get(state)
-        return code.decode('utf-8') if code else None
+        return code.decode("utf-8") if code else None
 
     def consume_code(self, state: str) -> str | None:
         """Retrieve and remove authorization code (single use).
@@ -265,5 +267,5 @@ class RedisOAuthCallbackHandler(OAuthCallbackHandlerBase):
         code = self.redis_client.get(state)
         if code:
             self.redis_client.delete(state)
-            return code.decode('utf-8')
+            return code.decode("utf-8")
         return None

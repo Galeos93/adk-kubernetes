@@ -1,4 +1,5 @@
 """Domain interface for agent calling capability."""
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 

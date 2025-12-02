@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from google.adk.agents import Agent
 from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
@@ -7,7 +9,9 @@ from google.adk.models.lite_llm import (
 )
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
-from infrastructure.adapters.gcp.google_agent_caller.google_agent_caller import AgentCallerGoogle
+from infrastructure.adapters.gcp.google_agent_caller.google_agent_caller import (
+    AgentCallerGoogle,
+)
 
 
 class TestAgentCallerGoogleUseCase:
@@ -16,6 +20,15 @@ class TestAgentCallerGoogleUseCase:
     def sample_request() -> str:
         """Provide sample agent request for testing."""
         return "What is the weather like today in New York?"
+
+    @staticmethod
+    @pytest.fixture
+    def auth_interceptor():
+        """Create a simple test Auth Interceptor."""
+        auth_interceptor = AsyncMock()
+        auth_interceptor.is_auth_event = MagicMock(return_value=False)
+
+        return auth_interceptor
 
     @staticmethod
     @pytest.fixture
@@ -77,6 +90,7 @@ class TestAgentCallerGoogleUseCase:
     @pytest.mark.integration
     async def test_call_agent_async_with_all_services(
         agent,
+        auth_interceptor,
         memory_service,
         artifact_service,
         session_service,
@@ -85,6 +99,7 @@ class TestAgentCallerGoogleUseCase:
         """Test the call_agent_async method of AgentCallerGoogleUseCase."""
         use_case = AgentCallerGoogle(
             agent=agent,
+            auth_interceptor=auth_interceptor,
             app_name="test_app",
             session_service=session_service,
             memory_service=memory_service,
@@ -107,6 +122,7 @@ class TestAgentCallerGoogleUseCase:
     @pytest.mark.unit
     async def test_given_runner_then_call_agent_async_returns_responses(
         agent,
+        auth_interceptor,
         session_service,
         sample_request,
     ):
@@ -114,6 +130,7 @@ class TestAgentCallerGoogleUseCase:
 
         use_case = AgentCallerGoogle(
             agent=agent,
+            auth_interceptor=auth_interceptor,
             app_name="test_app",
             session_service=session_service,
         )

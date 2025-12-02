@@ -2,12 +2,12 @@
 
 from dataclasses import dataclass
 
+from domain.exceptions import SessionAlreadyExistsError, SessionNotFoundError
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from infrastructure.adapters.fastapi.create_session_api import CreateSessionAPIBase
 from infrastructure.adapters.fastapi.health_api import HealthAPIBase
 from infrastructure.adapters.fastapi.run_agent_sse_api import RunAgentSSEAPIBase
-from domain.exceptions import SessionAlreadyExistsError
 
 
 @dataclass
@@ -36,10 +36,23 @@ class AppBuilder:
 
         # Register exception handlers
         @app.exception_handler(SessionAlreadyExistsError)
-        async def session_already_exists_handler(request: Request, exc: SessionAlreadyExistsError):
+        async def session_already_exists_handler(
+            request: Request,  # noqa: ARG001
+            exc: SessionAlreadyExistsError,
+        ):
             return JSONResponse(
                 status_code=409,
-                content={"detail": str(exc), "session_id": exc.session_id}
+                content={"detail": str(exc), "session_id": exc.session_id},
+            )
+
+        @app.exception_handler(SessionNotFoundError)
+        async def session_not_found_handler(
+            request: Request,  # noqa: ARG001
+            exc: SessionNotFoundError,
+        ):
+            return JSONResponse(
+                status_code=404,
+                content={"detail": str(exc), "session_id": exc.session_id},
             )
 
         # Register routes

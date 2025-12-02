@@ -1,30 +1,41 @@
+import copy  # Add this import for deep copying
 import json
 import os
-import copy  # Add this import for deep copying
+from pathlib import Path
 
-if os.environ.get('DISABLE_IPV6', "True").lower() == "true":
+if os.environ.get("DISABLE_IPV6", "True").lower() == "true":
     import requests
+
     requests.packages.urllib3.util.connection.HAS_IPV6 = False
 
-from google.adk.tools.application_integration_tool.application_integration_toolset import ApplicationIntegrationToolset
-from google.adk.auth.auth_credential import AuthCredential, AuthCredentialTypes, OAuth2Auth
-from google.adk.tools.openapi_tool.auth.auth_helpers import dict_to_auth_scheme
 from google.adk.agents.llm_agent import LlmAgent
+from google.adk.auth.auth_credential import (
+    AuthCredential,
+    AuthCredentialTypes,
+    OAuth2Auth,
+)
+from google.adk.tools.application_integration_tool.application_integration_toolset import (  # noqa: E501
+    ApplicationIntegrationToolset,
+)
+from google.adk.tools.openapi_tool.auth.auth_helpers import dict_to_auth_scheme
 
 from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.callbacks import (
-    GmailToolBeforeCallback,
-    GmailToolAfterCallback,
-    BeforeToolCallback,
     AfterToolCallback,
+    BeforeToolCallback,
+    GmailToolAfterCallback,
+    GmailToolBeforeCallback,
 )
 
 # --- Authentication Configuration ---
-# This section configures how the agent will handle authentication using OpenID Connect (OIDC),
+# This section configures how the agent will handle authentication using OpenID
+# Connect (OIDC),
 # often layered on top of OAuth 2.0.
+
 
 # Define the Authentication Scheme using OpenID Connect.
 # This object tells the ADK *how* to perform the OIDC/OAuth2 flow.
-# It requires details specific to your Identity Provider (IDP), like Google OAuth, Okta, Auth0, etc.
+# It requires details specific to your Identity Provider (IDP), like Google OAuth,
+# Okta, Auth0, etc.
 # Note: Replace the example Okta URLs and credentials with your actual IDP details.
 # All following fields are required, and available from your IDP.
 def configure_google_oauth2_data(scopes: dict):
@@ -43,8 +54,9 @@ def configure_google_oauth2_data(scopes: dict):
 
     return auth_scheme
 
+
 def load_service_account_credentials(sa_credentials_path: str) -> dict:
-    with open(sa_credentials_path, 'r') as f:
+    with Path(sa_credentials_path).open("r") as f:
         sa_credentials = json.load(f)
     return sa_credentials
 
@@ -61,11 +73,11 @@ AUTH_SCHEME = configure_google_oauth2_data(
 # !! SECURITY WARNING: Avoid hardcoding secrets in production code. !!
 # !! Use environment variables or a secret management system instead. !!
 AUTH_CREDENTIAL = AuthCredential(
-  auth_type=AuthCredentialTypes.OAUTH2,
-  oauth2=OAuth2Auth(
-      client_id=os.environ["GOOGLE_APP_CLIENT_ID"],
-      client_secret=os.environ["GOOGLE_APP_CLIENT_SECRET"]
-  ),
+    auth_type=AuthCredentialTypes.OAUTH2,
+    oauth2=OAuth2Auth(
+        client_id=os.environ["GOOGLE_APP_CLIENT_ID"],
+        client_secret=os.environ["GOOGLE_APP_CLIENT_SECRET"],
+    ),
 )
 
 if os.getenv("INTEGRATION_CONNECTION_SA_CREDENTIALS") is None:
@@ -75,19 +87,22 @@ else:
         load_service_account_credentials(
             os.environ["INTEGRATION_CONNECTION_SA_CREDENTIALS"]
         )
-    ) 
+    )
 
 connector_tool = ApplicationIntegrationToolset(
-    project="agents-playground-474510", # TODO: replace with GCP project of the connection
-    location="us-central1", #TODO: replace with location of the connection
-    connection="gmail-connection", #TODO: replace with connection name
-    entity_operations={"Entity_One": ["LIST","CREATE"], "Entity_Two": []},#empty list for actions means all operations on the entity are supported.
-    actions=["GET_gmail/v1/users/%7BuserId%7D/messages", "GET_gmail/v1/users/%7BuserId%7D/messages/%7Bid%7D"], #TODO: replace with actions. this one is for list events
+    project="agents-playground-474510",
+    location="us-central1",  # TODO: replace with location of the connection
+    connection="gmail-connection",  # TODO: replace with connection name
+    entity_operations={"Entity_One": ["LIST", "CREATE"], "Entity_Two": []},
+    actions=[
+        "GET_gmail/v1/users/%7BuserId%7D/messages",
+        "GET_gmail/v1/users/%7BuserId%7D/messages/%7Bid%7D",
+    ],  # TODO: replace with actions. this one is for list events
     service_account_json=SERVICE_ACCOUNT_JSON,
     tool_name_prefix="",
     tool_instructions="List e-mails from user and retrieve e-mail details",
     auth_scheme=AUTH_SCHEME,
-    auth_credential=AUTH_CREDENTIAL
+    auth_credential=AUTH_CREDENTIAL,
 )
 
 
@@ -102,17 +117,28 @@ def load_agent():
     auth_credential_copy = copy.deepcopy(AUTH_CREDENTIAL)
 
     root_agent = LlmAgent(
-        model='gemini-2.0-flash',
-        name='enterprise_assistant',
-        instruction='Help user integrate with multiple enterprise systems, including retrieving user information which may require authentication.',
+        model="gemini-2.0-flash",
+        name="enterprise_assistant",
+        instruction=(
+            "Help user integrate with multiple enterprise systems, including retrieving"
+            " user information which may require authentication.",
+        ),
         tools=[connector_tool],
-        before_tool_callback=BeforeToolCallback(callbacks={
-            tool.name: GmailToolBeforeCallback(auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy)
-            for tool in connector_tool._tools
-        }),
-        after_tool_callback=AfterToolCallback(callbacks={
-            tool.name: GmailToolAfterCallback(auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy)
-            for tool in connector_tool._tools
-        })
+        before_tool_callback=BeforeToolCallback(
+            callbacks={
+                tool.name: GmailToolBeforeCallback(
+                    auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy
+                )
+                for tool in connector_tool._tools
+            }
+        ),
+        after_tool_callback=AfterToolCallback(
+            callbacks={
+                tool.name: GmailToolAfterCallback(
+                    auth_scheme=auth_scheme_copy, auth_credential=auth_credential_copy
+                )
+                for tool in connector_tool._tools
+            }
+        ),
     )
     return root_agent

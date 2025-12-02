@@ -5,7 +5,6 @@ with the clean architecture setup.
 """
 
 import logging
-import os
 from pathlib import Path
 
 import uvicorn
@@ -15,24 +14,25 @@ from vyper import v
 
 from application.use_cases.chat_with_agent import ChatWithAgentUseCase
 from application.use_cases.session_register import RegisterSessionUseCase
-from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.agent import load_agent
 from infrastructure.adapters.fastapi.create_session_api import CreateSessionAPIImpl
 from infrastructure.adapters.fastapi.fastapi import AppBuilder
 from infrastructure.adapters.fastapi.health_api import HealthAPI
 from infrastructure.adapters.fastapi.run_agent_sse_api import RunAgentSSEAPI
+from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.agent import load_agent
 from infrastructure.adapters.gcp.google_agent_caller.google_agent_caller import (
     AgentCallerGoogle,
     AuthConfigHandler,
     AuthInterceptor,
 )
+from infrastructure.adapters.gcp.oauth_callback_app import create_oauth_callback_app
 from infrastructure.adapters.gcp.oauth_callback_handler import (
     InMemoryOAuthCallbackHandler,
     RedisOAuthCallbackHandler,
 )
-from infrastructure.adapters.gcp.oauth_callback_app import create_oauth_callback_app
 from infrastructure.adapters.gcp.session_repository import SessionRepositoryGoogleImpl
 
 logger = logging.getLogger(__name__)
+
 
 # Global OAuth handler that will be shared between main app and callback app
 # This must be created at module level to be accessible by both sub-apps
@@ -95,9 +95,12 @@ def configure_app():
     # Use the global oauth_handler so it can be shared with the callback app
     oauth_handler = _oauth_handler
     fastapi_port = v.get("fastapi.port") or 8000
-    redirect_uri = v.get(
-        "oauth.redirect_uri",
-    ) or f"http://localhost:{fastapi_port}/oauth/callback"
+    redirect_uri = (
+        v.get(
+            "oauth.redirect_uri",
+        )
+        or f"http://localhost:{fastapi_port}/oauth/callback"
+    )
     auth_config_handler = AuthConfigHandler(
         auth_config=None,  # Will be set dynamically during agent execution
         oauth_handler=oauth_handler,

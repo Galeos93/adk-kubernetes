@@ -1,9 +1,10 @@
 """Chat with agent use case implementation."""
+
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
-from application.interfaces.chat_with_agent import ChatWithAgentInterface
 from application.interfaces.agent_caller import AgentCallerInterface
+from application.interfaces.chat_with_agent import ChatWithAgentInterface
 from domain.entities.request import RunAgentRequest
 
 

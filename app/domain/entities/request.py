@@ -2,6 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+
 class RunAgentRequest(BaseModel):
     """Request model for running an agent - following ADK web server pattern."""
 

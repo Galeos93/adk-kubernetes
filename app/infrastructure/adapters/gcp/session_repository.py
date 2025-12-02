@@ -41,7 +41,6 @@ class SessionRepositoryGoogleImpl(SessionRepositoryInterface):
         except IntegrityError as e:
             # Check if it's a unique constraint violation for the primary key
             if "sessions_pkey" in str(e.orig) or "duplicate key" in str(e.orig):
-                raise SessionAlreadyExistsError(session.id)
+                raise SessionAlreadyExistsError(session.id) from e
             # Re-raise other integrity errors
             raise
-

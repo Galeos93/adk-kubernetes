@@ -26,4 +26,3 @@ class SessionRepositoryInterface(abc.ABC):
             If a session with the same ID already exists.
         """
         pass
-

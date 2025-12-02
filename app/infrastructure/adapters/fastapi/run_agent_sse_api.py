@@ -45,7 +45,6 @@ class SSEStreamGenerator:
 
         except Exception as e:
             # Send error as SSE event
-            raise e
             error_data = {
                 "type": "error",
                 "error": str(e),
