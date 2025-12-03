@@ -72,31 +72,6 @@ test-e2e: ## Run end-to-end tests only
 	poetry run pytest -m e2e
 	@echo "✅ E2E tests completed!"
 
-test-contract: ## Run contract tests only
-	@echo "🧪 Running contract tests..."
-	poetry run pytest -m contract
-	@echo "✅ Contract tests completed!"
-
-test-coverage: ## Run tests with coverage report
-	@echo "📊 Running tests with coverage..."
-	poetry run pytest
-	@echo "📁 HTML coverage report available in htmlcov/"
-	@echo "✅ Tests with coverage completed!"
-
-test-fast: ## Run tests excluding slow ones
-	@echo "🏃 Running fast tests..."
-	poetry run pytest -m "not slow"
-	@echo "✅ Fast tests completed!"
-
-# Server
-dev: ## Start development server
-	@echo "🚀 Starting development server..."
-	poetry run python app.py
-
-prod: ## Start production server
-	@echo "🚀 Starting production server..."
-	poetry run uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
-
 # Utilities
 clean: ## Clean up generated files and caches
 	@echo "🧹 Cleaning up generated files..."
@@ -133,11 +108,6 @@ docker-run-dev: ## Run Docker container in development mode
 watch-test: ## Run tests in watch mode (requires pytest-watch)
 	@echo "👀 Running tests in watch mode..."
 	poetry run ptw -- --tb=short
-
-serve-docs: ## Serve API documentation
-	@echo "📚 Starting API documentation server..."
-	python -c "import webbrowser; webbrowser.open('http://localhost:8000/docs')" &
-	$(MAKE) dev
 
 # Poetry specific commands
 poetry-shell: ## Activate poetry shell
