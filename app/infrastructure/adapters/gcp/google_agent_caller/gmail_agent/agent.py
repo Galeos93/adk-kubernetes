@@ -121,7 +121,7 @@ def load_agent():
         name="enterprise_assistant",
         instruction=(
             "Help user integrate with multiple enterprise systems, including retrieving"
-            " user information which may require authentication.",
+            " user information which may require authentication."
         ),
         tools=[connector_tool],
         before_tool_callback=BeforeToolCallback(

@@ -169,11 +169,12 @@ def main():
     fastapi_host = v.get("fastapi.host") or "0.0.0.0"
     fastapi_port = v.get("fastapi.port") or 8000
     fastapi_log_level = v.get("fastapi.log_level") or "info"
+    fastapi_workers = v.get("fastapi.workers") or 1
 
     # Start the server using the module-level app
     uvicorn.run(
         "main:app",
-        workers=int(v.get("fastapi.workers")),
+        workers=int(fastapi_workers),
         host=fastapi_host,
         port=int(fastapi_port),
         log_level=fastapi_log_level,

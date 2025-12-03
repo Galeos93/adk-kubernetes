@@ -114,7 +114,6 @@ destroy-infra:
 		-target=kubernetes_service_account.fastapi_agent \
 		-target=aws_iam_role.fastapi_agent_role \
 		-target=aws_iam_role_policy_attachment.fastapi_agent_ecr_access \
-		-target=aws_ecr_repository.fastapi_agent \
 		-target=aws_db_subnet_group.postgres \
 		-target=aws_security_group.rds \
 		-target=aws_db_instance.postgres \
