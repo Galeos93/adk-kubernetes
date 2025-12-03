@@ -11,22 +11,7 @@ This repository showcases a production-ready deployment of a FastAPI application
 - **Deployment Layer**: Helm charts with encrypted secrets management
 - **Security**: SOPS encryption, AWS Secrets Manager, IAM roles
 
-## Architecture
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   FastAPI       │    │   Google ADK     │    │   PostgreSQL    │
-│   Application   │───▶│   Gmail Agent    │───▶│   Database      │
-│   (Clean Arch)  │    │                  │    │   (AWS RDS)     │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                        │
-         ▼                        ▼                        ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Kubernetes    │    │   Helm Charts    │    │   AWS EKS       │
-│   (Deployment)  │    │   (Encrypted     │    │   Cluster       │
-│                 │    │    Secrets)      │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+Once you deploy the infrastructure and application, you will be able to talk with an agent to have access to your Gmail account and perform operations like reading emails in a secure manner, using OAuth2 authentication.
 
 ## Repository Structure
 
@@ -41,57 +26,9 @@ AWS infrastructure as code using Terraform. See [infra/README.md](./infra/README
 
 ## Quick Start
 
-1. **Set up infrastructure**: `cd infra && terraform init && terraform apply`
-2. **Deploy application**: `cd ../deploy && make deploy`
-3. **Develop locally**: `cd ../app && python main.py`
-
-## Security Considerations
-
-### 🚨 Critical Security Notes
-
-1. **Private Keys**: AGE private keys in `*/key.txt` files should **NEVER** be committed to version control
-2. **Terraform State**: `terraform.tfstate` files contain infrastructure state and should **NEVER** be committed
-3. **Environment Variables**: Real API keys should not be committed - use placeholder values
-4. **Secrets Management**: Use AWS Secrets Manager or similar for production secrets
-
-### Security Features
-
-- **Encrypted Secrets**: All sensitive data encrypted with SOPS
-- **IAM Roles**: Least privilege access for AWS services
-- **Network Security**: VPC isolation, security groups
-- **OAuth2**: Secure authentication flows
-- **HTTPS**: SSL/TLS encryption for all endpoints
-
-## Prerequisites
-
-- **Python 3.11+**: For application development
-- **Docker**: Container building and testing
-- **AWS CLI**: Configured with appropriate credentials
-- **Terraform 1.x**: Infrastructure provisioning
-- **kubectl & Helm 3.x**: Kubernetes operations
-- **SOPS**: Secrets encryption/decryption
-
-## API Endpoints
-
-Once deployed, access:
-- **API Documentation**: `https://your-domain.com/docs`
-- **Health Check**: `https://your-domain.com/health`
-- **Agent Endpoint**: `POST https://your-domain.com/run_sse`
-
-## Contributing
-
-1. **Fork** the repository
-2. **Create** a feature branch
-3. **Make** your changes following clean architecture principles
-4. **Test** thoroughly (unit tests, integration tests)
-5. **Update** documentation as needed
-6. **Submit** a pull request
-
-### Code Standards
-- Follow PEP 8 for Python code
-- Use Terraform best practices
-- Include security considerations in changes
-- Update READMEs for any architectural changes
+1. **Set up infrastructure**: Go to `infra/` and follow the instructions in [infra/README.md](./infra/README.md) to initialize and apply the Terraform configuration.
+2. **Develop and build locally**: Go to `app/` and follow the instructions in [app/README.md](./app/README.md) to run the FastAPI application locally and build a Docker image for deployment.
+3. **Deploy application**: Go to `deploy/` and follow the instructions in [deploy/README.md](./deploy/README.md) to deploy the application using Helm.
 
 ## License
 

@@ -45,9 +45,90 @@ infra/
 
 1. **AWS CLI**: Configure with appropriate credentials
 2. **Terraform**: Version 1.x
-3. **SOPS**: For secrets encryption/decryption
+3. **SOPS and AGE**: For secrets encryption/decryption
 4. **kubectl**: For Kubernetes cluster access
-5. **AWS Account**: With permissions for EKS, ECR, RDS, etc.
+5. **jq**: For JSON processing in scripts
+6. **AWS Account**: With permissions for EKS, ECR, RDS, etc.
+7. **Web domain**: For Route53 and SSL (must be available for registration)
+
+## Quick Start
+
+### 1. Create secrets with AGE and SOPS
+
+Create AGE encryption keys:
+
+```bash
+age-keygen -o key.txt
+```
+
+Configure SOPS environment variable:
+
+```bash
+export SOPS_AGE_KEY_FILE=./key.txt
+```
+
+Update the public key in `.sops.yaml` (found in `key.txt`).
+
+Encrypt secrets with the following keys:
+
+- `db_user`: Database username used by the app
+- `db_password`: Database password used by the app
+
+```bash
+sops secrets.yaml
+```
+
+### 2. Deploy Infrastructure
+
+Use make to deploy the infrastructure. You can override default variables as needed:
+
+```bash
+# Basic deployment with defaults
+make deploy-infra
+
+# Override AWS profile (default: default)
+PROFILE=your-profile make deploy-infra
+
+# Override AWS region (default: us-west-2)
+REGION=us-east-1 make deploy-infra
+
+# Override domain name (default: agent-playground.online)
+DOMAIN_NAME=yourdomain.com make deploy-infra
+
+# Combine multiple overrides
+PROFILE=personal REGION=us-west-2 DOMAIN_NAME=myapp.com make deploy-infra
+```
+
+This will:
+- Initialize Terraform
+- Deploy VPC, EKS cluster, and networking
+- Set up ECR, RDS, IAM roles
+- Configure Route53, ACM certificates
+- Deploy Kubernetes resources (ingress, secrets, jobs)
+- Wait for ALB creation
+- Add DNS records
+
+### 3. Configure Domain Nameservers
+
+After deployment completes, you need to update your domain registrar (e.g., GoDaddy) with the Route53 nameservers:
+
+1. **Get the nameservers** from Route53:
+   ```bash
+   aws route53 get-hosted-zone --id $(terraform output -raw hosted_zone_id) --query 'DelegationSet.NameServers' --output text
+   ```
+
+2. **Update your domain registrar**:
+   - Log into your domain registrar's control panel
+   - Find the nameserver/DNS settings for your domain
+   - Replace the existing nameservers with the ones from Route53
+   - Save the changes
+
+3. **Wait for DNS propagation**:
+   - DNS changes can take up to 48 hours to propagate globally
+   - You can check propagation using tools like `dig` or `nslookup`
+   - Your application will be accessible at `https://yourdomain.com` once propagation completes
+
+⚠️ **Important**: Do not proceed with application deployment until DNS propagation is complete, as SSL certificates depend on the domain resolving correctly.
 
 ## Security Notes
 
@@ -70,44 +151,38 @@ infra/
 
 4. **Access Control**: Limit AWS credentials scope to minimum required permissions.
 
-## Quick Start
-
-### 1. Initialize Terraform
-
-```bash
-terraform init
-```
-
-### 2. Plan Deployment
-
-```bash
-terraform plan
-```
-
-### 3. Apply Infrastructure
-
-```bash
-terraform apply
-```
-
-### 4. Configure kubectl
-
-```bash
-aws eks update-kubeconfig --region us-west-2 --name your-cluster-name
-```
 
 ## Configuration
 
-### Variables
+### Makefile Variables
 
-Key variables in `variables.tf`:
+The `Makefile` defines default values for infrastructure variables:
 
-- `aws_region`: AWS region (default: us-west-2)
-- `cluster_name`: EKS cluster name
-- `vpc_cidr`: VPC CIDR block
-- `db_app_username`: Application database user
-- `db_app_password`: Application database password (sensitive)
-- `domain_name`: Domain for Route53
+- `PROFILE`: AWS CLI profile (default: `default`)
+- `REGION`: AWS region (default: `us-west-2`)
+- `DOMAIN_NAME`: Domain for Route53 (default: `agent-playground.online`)
+- `DB_NAME`: Database name (default: `fastapi_agent_db`)
+- `DB_USERNAME`: Database admin username (default: `postgres`)
+- `DB_INSTANCE_CLASS`: RDS instance type (default: `db.t4g.micro`)
+- `DB_ALLOCATED_STORAGE`: RDS storage in GB (default: `20`)
+
+Override any variable when running make commands:
+
+```bash
+PROFILE=myprofile REGION=us-east-1 make deploy-infra
+```
+
+### Terraform Variables
+
+Key variables in `variables.tf` (with defaults):
+
+- `domain_name`: Domain for Route53 (default: `agent-playground.online`)
+- `db_name`: Database name (default: `fastapi_agent_db`)
+- `db_username`: Database admin username (default: `postgres`)
+- `db_instance_class`: RDS instance type (default: `db.t4g.micro`)
+- `db_allocated_storage`: RDS storage in GB (default: `20`)
+- `db_app_username`: Application database user (from secrets)
+- `db_app_password`: Application database password (from secrets)
 
 ### Secrets
 
@@ -146,6 +221,15 @@ Encrypted in `secrets.yaml`:
 
 ## Usage
 
+### Available Make Commands
+
+- `make deploy-infra`: Deploy all infrastructure
+- `make destroy-infra`: Destroy all infrastructure (keeps Route53 zone)
+- `make set-kubeconfig`: Update kubectl config for EKS cluster
+- `make ecr-login`: Login to ECR repository
+- `make build-and-push`: Build and push Docker image to ECR
+- `make install-addons`: Install EKS add-ons (VPC CNI, CoreDNS, Kube Proxy)
+
 ### Database Initialization
 
 The infrastructure includes a Kubernetes job that initializes the database:
@@ -158,84 +242,61 @@ The infrastructure includes a Kubernetes job that initializes the database:
 
 After infrastructure is ready:
 
-1. Build and push Docker image to ECR
+1. Build and push Docker image: `make build-and-push`
 2. Deploy using Helm (from `../deploy/` folder)
 3. Configure ingress and SSL
 
-## Maintenance
-
-### Updates
-
-```bash
-# Plan changes
-terraform plan
-
-# Apply updates
-terraform apply
-```
-
-### Database Management
-
-- Backups are automated via RDS
-- Manual snapshots can be created via AWS console
-- Password rotation requires updating secrets and redeploying
-
-### Cluster Scaling
-
-- Node groups auto-scale based on CPU/memory
-- Manual scaling via AWS console or eksctl
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Terraform State Lock**
-   ```
-   Error: Error acquiring the state lock
-   ```
-   - Check if another process is running terraform
-   - Force unlock if necessary: `terraform force-unlock LOCK_ID`
-
-2. **EKS Cluster Access**
-   ```
-   Unable to connect to the server
-   ```
-   - Update kubeconfig: `aws eks update-kubeconfig --region REGION --name CLUSTER`
-   - Check AWS credentials and IAM permissions
-
-3. **Secrets Decryption**
-   - Ensure `key.txt` exists and matches `.sops.yaml`
-   - Check SOPS installation
-
-### Logs and Monitoring
-
-- **CloudWatch**: EKS control plane logs
-- **RDS Monitoring**: Performance insights
-- **VPC Flow Logs**: Network traffic analysis
-
-## Cost Optimization
-
-- **EKS**: Use spot instances for non-critical workloads
-- **RDS**: Right-size instance type, enable auto-scaling
-- **NAT Gateways**: Can be expensive; consider VPC endpoints
-- **Unused Resources**: Regularly audit and remove unused infrastructure
-
-## Production Considerations
-
-1. **Remote State**: Use S3 backend with DynamoDB locking
-2. **State Encryption**: Enable encryption for S3 bucket
-3. **Backup Strategy**: Regular state backups and disaster recovery
-4. **Multi-Region**: Consider multi-region deployment for high availability
-5. **Security Groups**: Least privilege access rules
-6. **Monitoring**: Enable CloudTrail, Config, and GuardDuty
-
 ## Cleanup
 
-To destroy all infrastructure:
+### Destroying Infrastructure
+
+To destroy all infrastructure while preserving critical resources:
+
+```bash
+make destroy-infra
+```
+
+**What gets destroyed:**
+- EKS cluster and node groups
+- RDS PostgreSQL database
+- ECR repository
+- VPC, subnets, security groups
+- IAM roles and policies
+- Kubernetes resources (ingress, secrets, jobs)
+- ACM certificates
+- Application Load Balancer
+
+**What gets preserved:**
+- **Route53 hosted zone and DNS records**: Kept to avoid reconfiguring nameservers with your domain registrar (e.g., GoDaddy). This allows you to redeploy without DNS changes.
+- **Route53 hosted zone**: The zone itself remains so your domain's DNS configuration stays intact.
+
+### Complete Cleanup
+
+If you want to destroy **everything** including the Route53 hosted zone:
 
 ```bash
 terraform destroy
 ```
 
-**⚠️ WARNING**: This will delete all resources including databases and data!</content>
-<parameter name="filePath">/home/alejandro_garcia/repos/borrar/adk-kubernetes/infra/README.md
+⚠️ **Warning**:
+- This will remove the Route53 hosted zone, requiring you to update nameservers with your domain registrar again.
+- **ECR repositories with images will NOT be deleted** by Terraform. AWS protects repositories containing images from automatic deletion.
+- Some resources may require manual cleanup if they contain data or dependencies.
+
+#### Manual Cleanup Steps
+
+After `terraform destroy`, you may need to manually delete:
+
+1. **ECR Images**: Empty the repository before deletion
+   ```bash
+   # List images
+   aws ecr list-images --repository-name fastapi-agent
+
+   # Delete images (replace with actual image IDs)
+   aws ecr batch-delete-image --repository-name fastapi-agent --image-ids imageDigest=sha256:...
+
+   # Delete repository
+   aws ecr delete-repository --repository-name fastapi-agent --force
+   ```
+
+2. **Check for remaining resources** in the AWS console or CLI that Terraform couldn't delete.

@@ -1,10 +1,23 @@
 export SOPS_AGE_KEY_FILE=./key.txt
 
+# AWS profile to use (default: default)
+PROFILE ?= default
+
+# AWS region to use (default: us-west-2)
+REGION ?= us-west-2
+
+# Terraform variable defaults
+DOMAIN_NAME ?= agent-playground.online
+DB_NAME = fastapi_agent_db
+DB_USERNAME = postgres
+DB_INSTANCE_CLASS = db.t4g.micro
+DB_ALLOCATED_STORAGE = 20
+
 set-kubeconfig:
-	aws eks update-kubeconfig --region us-west-2 --name eks-cluster --profile personal
+	aws eks update-kubeconfig --region $(REGION) --name eks-cluster --profile $(PROFILE)
 
 ecr-login:
-	aws ecr get-login-password --region us-west-2 --profile personal | docker login --username AWS --password-stdin $(shell terraform output -raw ecr_repository_url | cut -d'/' -f1)
+	aws ecr get-login-password --region $(REGION) --profile $(PROFILE) | docker login --username AWS --password-stdin $(shell terraform output -raw ecr_repository_url | cut -d'/' -f1)
 
 build-and-push:
 	$(eval ECR_REPO := $(shell terraform output -raw ecr_repository_url))
@@ -16,19 +29,30 @@ build-and-push:
 
 
 install-addons:
-	aws eks create-addon --cluster-name eks-cluster --addon-name vpc-cni --region us-west-2 --profile personal
-	aws eks create-addon --cluster-name eks-cluster --addon-name coredns --region us-west-2 --profile personal
-	aws eks create-addon --cluster-name eks-cluster --addon-name kube-proxy --region us-west-2 --profile personal
+	aws eks create-addon --cluster-name eks-cluster --addon-name vpc-cni --region $(REGION) --profile $(PROFILE)
+	aws eks create-addon --cluster-name eks-cluster --addon-name coredns --region $(REGION) --profile $(PROFILE)
+	aws eks create-addon --cluster-name eks-cluster --addon-name kube-proxy --region $(REGION) --profile $(PROFILE)
 
 
 deploy-infra:
 	@echo "Stage 1: Deploying infrastructure (excluding DNS A record)..."
 	$(eval DB_USER := $(shell sops -d --extract '["db_user"]' secrets.yaml))
 	$(eval DB_PASSWORD := $(shell sops -d --extract '["db_password"]' secrets.yaml))
+	@if [ -z "$(DB_USER)" ] || [ -z "$(DB_PASSWORD)" ]; then \
+		echo "❌ Error: Failed to extract database credentials from secrets.yaml"; \
+		echo "Make sure secrets.yaml is properly encrypted and SOPS_AGE_KEY_FILE is set"; \
+		exit 1; \
+	fi
+	@echo "✅ Database credentials extracted successfully"
 	terraform init
 	terraform apply -auto-approve \
 		-var="db_app_username=$(DB_USER)" \
 		-var="db_app_password=$(DB_PASSWORD)" \
+		-var="domain_name=$(DOMAIN_NAME)" \
+		-var="db_name=$(DB_NAME)" \
+		-var="db_username=$(DB_USERNAME)" \
+		-var="db_instance_class=$(DB_INSTANCE_CLASS)" \
+		-var="db_allocated_storage=$(DB_ALLOCATED_STORAGE)" \
 		-target=module.vpc \
 		-target=module.eks
 	@echo ""
@@ -39,6 +63,11 @@ deploy-infra:
 	terraform apply -auto-approve \
 		-var="db_app_username=$(DB_USER)" \
 		-var="db_app_password=$(DB_PASSWORD)" \
+		-var="domain_name=$(DOMAIN_NAME)" \
+		-var="db_name=$(DB_NAME)" \
+		-var="db_username=$(DB_USERNAME)" \
+		-var="db_instance_class=$(DB_INSTANCE_CLASS)" \
+		-var="db_allocated_storage=$(DB_ALLOCATED_STORAGE)" \
 		-target=aws_iam_role.fastapi_agent_role \
 		-target=aws_iam_role_policy_attachment.fastapi_agent_ecr_access \
 		-target=kubernetes_service_account.fastapi_agent \
@@ -72,6 +101,11 @@ deploy-infra:
 	terraform apply -auto-approve \
 		-var="db_app_username=$(DB_USER)" \
 		-var="db_app_password=$(DB_PASSWORD)" \
+		-var="domain_name=$(DOMAIN_NAME)" \
+		-var="db_name=$(DB_NAME)" \
+		-var="db_username=$(DB_USERNAME)" \
+		-var="db_instance_class=$(DB_INSTANCE_CLASS)" \
+		-var="db_allocated_storage=$(DB_ALLOCATED_STORAGE)" \
 		-target=aws_route53_record.api \
 		-target=aws_route53_record.db
 	@echo ""
@@ -91,6 +125,11 @@ destroy-infra:
 	terraform destroy -auto-approve \
 		-var="db_app_username=$(DB_USER)" \
 		-var="db_app_password=$(DB_PASSWORD)" \
+		-var="domain_name=$(DOMAIN_NAME)" \
+		-var="db_name=$(DB_NAME)" \
+		-var="db_username=$(DB_USERNAME)" \
+		-var="db_instance_class=$(DB_INSTANCE_CLASS)" \
+		-var="db_allocated_storage=$(DB_ALLOCATED_STORAGE)" \
 		-target=kubernetes_ingress_v1.agent_ingress
 	@echo "Waiting for ELB to be deleted..."
 	@bash -c 'for i in {1..30}; do \
@@ -98,7 +137,7 @@ destroy-infra:
 	    echo "✅ No ELB hostname found, assuming deleted."; \
 	    break; \
 	  fi; \
-	  ELB_EXISTS=$$(aws elbv2 describe-load-balancers --region us-west-2 | jq -r ".LoadBalancers[] | select(.DNSName == \"$(ELB_HOSTNAME)\") | .LoadBalancerArn" 2>/dev/null || echo ""); \
+	  ELB_EXISTS=$$(aws elbv2 describe-load-balancers --region $(REGION) --profile $(PROFILE) | jq -r ".LoadBalancers[] | select(.DNSName == \"$(ELB_HOSTNAME)\") | .LoadBalancerArn" 2>/dev/null || echo ""); \
 	  if [ -z "$$ELB_EXISTS" ]; then \
 	    echo "✅ ELB deleted."; \
 	    break; \
@@ -110,6 +149,11 @@ destroy-infra:
 	terraform destroy -auto-approve \
 		-var="db_app_username=$(DB_USER)" \
 		-var="db_app_password=$(DB_PASSWORD)" \
+		-var="domain_name=$(DOMAIN_NAME)" \
+		-var="db_name=$(DB_NAME)" \
+		-var="db_username=$(DB_USERNAME)" \
+		-var="db_instance_class=$(DB_INSTANCE_CLASS)" \
+		-var="db_allocated_storage=$(DB_ALLOCATED_STORAGE)" \
 		-target=helm_release.aws_load_balancer_controller \
 		-target=kubernetes_service_account.fastapi_agent \
 		-target=aws_iam_role.fastapi_agent_role \
