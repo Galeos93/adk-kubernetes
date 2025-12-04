@@ -1,6 +1,6 @@
 # Gmail Agent FastAPI Application
 
-This application demonstrates a clean architecture implementation of a FastAPI server that uses Google ADK agents for Gmail operations, following hexagonal architecture principles.
+This application demonstrates a clean architecture implementation of a FastAPI server that uses Google ADK agents for Gmail operations, following hexagonal architecture principles. After setting it up, you will be able to interact with an agent to access your (or others') Gmail account and perform operations like reading emails securely using OAuth2 authentication.
 
 ## Quick Start
 
@@ -8,15 +8,300 @@ Get up and running quickly with Docker:
 
 ```bash
 # 1. Set up Google Cloud (see Google Cloud Setup section below)
-# 2. Configure environment variables in .env file
+
+# 2. Create .env file with required environment variables
+cat > .env << 'EOF'
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_GENAI_USE_VERTEXAI=True
+GEMINI_API_KEY=your-api-key
+SQL_URI=sqlite:///./session_db.sqlite
+FASTAPI_HOST=0.0.0.0
+FASTAPI_PORT=8080
+FASTAPI_LOG_LEVEL=info
+FASTAPI_WORKERS=1
+OAUTH_REDIRECT_URI=http://localhost:8080/oauth/callback
+GOOGLE_APP_CLIENT_ID=your-client-id
+GOOGLE_APP_CLIENT_SECRET=your-client-secret
+REDIS_URL=redis://redis:6379
+EOF
+
 # 3. Run in development mode
 make docker-run-dev
 
 # 4. Test the API
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 ```
 
-For detailed setup instructions, see [Google Cloud Setup](#google-cloud-setup) and [Development Setup](#development-setup).
+For detailed setup instructions, see [Google Cloud Setup](#google-cloud-setup) and [Running the Application Locally](#️-running-the-application-locally).
+
+## ▶️ Running the Application Locally
+
+This section guides you through running the application on your local machine using Docker.
+
+### Prerequisites
+
+- Docker installed on your system
+- Google Cloud account with proper setup (see [Google Cloud Setup](#google-cloud-setup))
+- `.env` file configured with required environment variables
+
+### Environment Configuration
+
+Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Google Cloud
+GOOGLE_CLOUD_PROJECT=your-project-id
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_GENAI_USE_VERTEXAI=True
+GEMINI_API_KEY=your-api-key
+
+# Database
+SQL_URI=sqlite:///./session_db.sqlite
+
+# FastAPI
+FASTAPI_HOST=0.0.0.0
+FASTAPI_PORT=8080
+FASTAPI_LOG_LEVEL=info
+FASTAPI_WORKERS=1
+
+# OAuth2
+OAUTH_REDIRECT_URI=http://localhost:8080/oauth/callback
+GOOGLE_APP_CLIENT_ID=your-client-id
+GOOGLE_APP_CLIENT_SECRET=your-client-secret
+
+# Redis (optional for development)
+REDIS_URL=redis://redis:6379
+```
+
+### Running with Docker
+
+```bash
+# Build the Docker image
+make docker-build
+
+# Run in development mode (with GCP credentials mounted)
+make docker-run-dev
+
+# The application will be available at http://localhost:8080
+```
+
+### Testing the API
+
+Once the application is running, you can test it using the provided Postman collection:
+
+1. Import `postman-collection.json` and `postman-environment.json` into Postman
+2. Create a session first: `POST /create_session`
+3. Test the agent: `POST /run_sse` with the session ID
+
+Or use curl:
+
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# View API documentation
+open http://localhost:8080/docs
+```
+
+## 🧑‍💻 Development Guide
+
+This section is for developers who want to contribute to the codebase, add new features, or modify existing functionality.
+
+### Prerequisites
+
+- Python 3.11+
+- Poetry for dependency management
+- Docker for containerized development
+- Google Cloud SDK
+
+### Initial Setup
+
+```bash
+# Install production dependencies
+make install
+
+# Install development dependencies (includes testing tools)
+make install-dev
+
+# Or install directly with Poetry
+poetry install
+```
+
+### Development Workflow
+
+1. **Setup**: `make install-dev`
+2. **Code**: Make your changes
+3. **Quality**: `make check` (format + lint)
+4. **Test**: `make test`
+5. **Clean**: `make clean` when done
+
+### Code Quality & Formatting
+
+```bash
+# Format code with ruff
+make format
+
+# Run linting checks (ruff + mypy)
+make lint
+
+# Format and lint in one command
+make check
+
+# Run all quality checks at once (lint + test)
+make quality
+
+# Run full CI pipeline (format, lint, test)
+make ci
+```
+
+### Dependency Management
+
+```bash
+# Activate poetry shell
+make poetry-shell
+
+# Show installed packages
+make poetry-show
+
+# Update dependencies
+make poetry-update
+
+# Generate/update poetry.lock
+make poetry-lock
+
+# Export requirements.txt
+make poetry-export
+```
+
+### Local Development Server
+
+```bash
+# Run the application directly (without Docker)
+python main.py
+
+# The application will be available at http://localhost:8080
+```
+
+### Cleanup
+
+```bash
+# Clean up generated files and caches
+make clean
+```
+
+## 🧪 Testing
+
+The application includes comprehensive tests following the testing pyramid:
+
+### Test Structure
+
+- **Unit Tests**: Test individual components in isolation
+- **Integration Tests**: Test component interactions
+- **E2E Tests**: Test complete user journeys
+- **Contract Tests**: Verify API contracts
+
+### Test Files
+
+- `tests/conftest.py`: Test fixtures and configuration
+- `tests/infrastructure/adapters/fastapi/test_fastapi.py`: Web layer tests
+- `tests/infrastructure/adapters/fastapi/test_agent_endpoints.py`: API endpoint tests
+- `tests/application/use_cases/test_google_agent_caller.py`: Use case tests
+
+### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run specific test types
+make test-unit        # Unit tests only
+make test-integration # Integration tests only
+make test-e2e         # End-to-end tests only
+
+# Run tests with verbose output
+poetry run pytest -vv
+
+# Run specific test file
+poetry run pytest tests/infrastructure/adapters/fastapi/test_fastapi.py
+
+# Run tests in watch mode (auto-run on file changes)
+make watch-test
+```
+
+## 🐳 Docker Guide
+
+This section covers building, running, and pushing Docker images for the application.
+
+### Building Docker Images
+
+```bash
+# Build the Docker image
+make docker-build
+
+# This runs: docker build -f docker/Dockerfile -t fastapi-agent:latest .
+```
+
+### Running Docker Containers
+
+```bash
+# Run in production mode
+make docker-run
+
+# Run in development mode (with GCP credentials mounted)
+make docker-run-dev
+```
+
+### Development vs Production Mode
+
+**Development Mode (`make docker-run-dev`):**
+- Mounts Google Cloud credentials from `~/.config/gcloud/`
+- Uses local `.env` file for configuration
+- Exposes port 8080
+- Runs as root for easier debugging
+
+**Production Mode (`make docker-run`):**
+- Uses environment variables directly
+- Runs as non-root user for security
+- Optimized for production deployment
+
+### Pushing Images to Registry
+
+```bash
+# Tag the image for your registry
+docker tag fastapi-agent:latest <registry>/<project>/fastapi-agent:latest
+docker tag fastapi-agent:latest <registry>/<project>/fastapi-agent:v1.0.0
+
+# Push to registry
+docker push <registry>/<project>/fastapi-agent:latest
+docker push <registry>/<project>/fastapi-agent:v1.0.0
+```
+
+**Example for Google Container Registry:**
+
+```bash
+# Tag for GCR
+docker tag fastapi-agent:latest gcr.io/your-project-id/fastapi-agent:latest
+
+# Configure Docker to use gcloud credentials
+gcloud auth configure-docker
+
+# Push to GCR
+docker push gcr.io/your-project-id/fastapi-agent:latest
+```
+
+**Example for AWS ECR:**
+
+```bash
+# Login to ECR
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-west-2.amazonaws.com
+
+# Tag for ECR
+docker tag fastapi-agent:latest <account-id>.dkr.ecr.us-west-2.amazonaws.com/fastapi-agent:latest
+
+# Push to ECR
+docker push <account-id>.dkr.ecr.us-west-2.amazonaws.com/fastapi-agent:latest
+```
 
 ## Architecture Overview
 
@@ -71,7 +356,7 @@ The application follows **Clean Architecture** (Hexagonal Architecture) with str
 
 **🎯 Application Layer**
 - **AgentCaller Interface**: Contract defining how to call external agents
-- **ChatWithAgent Use Case**: Orchestrates agent conversations, manages session state, handles streaming responses
+- **ChatWithAgent Use Case**: Orchestrates agent conversations, manages session state,handles streaming responses
 - **SessionRegister Use Case**: Creates new sessions, validates session data, persists session information
 
 **🎯 Infrastructure & Presentation Layer**
@@ -85,6 +370,28 @@ The application follows **Clean Architecture** (Hexagonal Architecture) with str
 ✅ **Flexibility**: Swap implementations (SQLite ↔ PostgreSQL, FastAPI ↔ CLI)
 ✅ **Maintainability**: Clear boundaries prevent coupling
 ✅ **Business Focus**: Domain logic protected from technical changes
+
+### Key Features
+
+#### ✅ **Clean Architecture**
+- **Web Layer**: FastAPI handles HTTP/SSE concerns
+- **Application Layer**: Use case orchestrates agent execution  
+- **Infrastructure Layer**: Google ADK handles agent implementation
+
+#### ✅ **Framework Independence**
+- Use case has no FastAPI dependencies
+- Can be used with any web framework or CLI
+- Easy to test in isolation
+
+#### ✅ **Server-Sent Events (SSE)**
+- Real-time streaming responses from Gmail agent
+- Follows same pattern as Google ADK web server
+- Proper error handling and completion events
+
+#### ✅ **OAuth2 Integration**
+- Secure authentication with Google OAuth2
+- Callback handling for authorization codes
+- In-memory or Redis-based OAuth state management
 
 ## Files Structure
 
@@ -138,28 +445,6 @@ app/
                 └── test_fastapi.py
 ```
 
-## Key Features
-
-### ✅ **Clean Architecture**
-- **Web Layer**: FastAPI handles HTTP/SSE concerns
-- **Application Layer**: Use case orchestrates agent execution  
-- **Infrastructure Layer**: Google ADK handles agent implementation
-
-### ✅ **Framework Independence**
-- Use case has no FastAPI dependencies
-- Can be used with any web framework or CLI
-- Easy to test in isolation
-
-### ✅ **Server-Sent Events (SSE)**
-- Real-time streaming responses from Gmail agent
-- Follows same pattern as Google ADK web server
-- Proper error handling and completion events
-
-### ✅ **OAuth2 Integration**
-- Secure authentication with Google OAuth2
-- Callback handling for authorization codes
-- In-memory or Redis-based OAuth state management
-
 ## Google Cloud Setup
 
 To run the application, you need to set up a Google Cloud project, allow integration with Gmail, and make use of Vertex AI (we will use gemini models).
@@ -192,8 +477,6 @@ Grant the necessary roles to access Vertex AI services.
 
 **Required roles:** `Vertex AI User`
 
-## External Application Integration Tools
-
 ### Gmail Access Configuration
 
 To access Gmail (a Google application), configure the ApplicationIntegrationToolset with the following required roles:
@@ -207,20 +490,20 @@ These roles can be assigned to:
 - The user executing the application (for local development)
 - A service account (for production deployment).
 
-## Integration Connectors Implementation
+### Integration Connectors Implementation
 
 Integration Connectors provide a standardized interface for connecting to various data sources.
 To access Gmail data, follow the official configuration guide:
 
 [Gmail Connector Configuration Guide](https://cloud.google.com/integration-connectors/docs/connectors/gsc_gmail/configure?hl=es)
 
-### Service Account Setup
+#### Service Account Setup
 
 The implementation requires creating a service account with roles mentioned on section [Gmail Access Configuration](#gmail-access-configuration).
 
 Additionally, assign the `roles/connectors.admin` role to the person creating the connector.
 
-### Authentication Configuration
+#### Authentication Configuration
 
 **Important:** Enable "Authentication Override" to allow for delegated authorization.
 
@@ -228,190 +511,25 @@ When your service account or personal credentials have authorization to access t
 the agent will inherit access to Gmail. Specifically, it will have access to the actions defined
 during connector creation (e.g., reading emails).
 
-## Development Setup
+### OAuth2 Client Setup
 
-### 1. Set up configuration
+To enable OAuth2 authentication for accessing Gmail, you need to set up an OAuth2 client in the Google Cloud Console. You can control what users can access by configuring the OAuth2 consent screen and specifying authorized redirect URIs. For the redirect URIs, you should include the endpoint that handles OAuth2 callbacks in your application, such as `https://yourdomain.com/oauth/callback` and `http://localhost:8080/oauth/callback` for local development.
 
-You need to set up the environment variables and configuration files, specially for local development. Regarding the environment variables, you will need to create a `.env` file in the root directory with the following content:
+## Contributing
 
-GOOGLE_CLOUD_PROJECT
-GOOGLE_CLOUD_LOCATION
-GOOGLE_GENAI_USE_VERTEXAI
-GEMINI_API_KEY
-SQL_URI
-FASTAPI_HOST
-FASTAPI_PORT
-FASTAPI_LOG_LEVEL
-FASTAPI_WORKERS
-OAUTH_REDIRECT_URI
-GOOGLE_APP_CLIENT_ID
-GOOGLE_APP_CLIENT_SECRET
-REDIS_URL
+Contributions are welcome! Please follow these guidelines:
 
-### 2. Start docker in development mode
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Make your changes following the [Development Guide](#-development-guide)
+4. Run tests and quality checks: `make ci`
+5. Commit your changes: `git commit -m 'Add some feature'`
+6. Push to the branch: `git push origin feature/your-feature`
+7. Submit a pull request
 
-Next, you can start the application using docker. If you set-up the google cloud correctly, you will have some user credentials that will be used by the application.
+### Code Standards
 
-
-```bash
-make docker-run-dev
-```
-
-### 3. Test the API
-
-To test the API, you can make use fo the postman collection provided in the `postman-collection.json` file. Bear in mind that you need to create a user session first using the `/create_session` endpoint, before calling the `/run_sse` endpoint.
-
-## Development
-
-This section is for developers who want to contribute to the codebase.
-
-### Prerequisites
-
-- Python 3.11+
-- Poetry for dependency management
-- Docker for containerized development
-- Google Cloud SDK
-
-### Setup
-
-```bash
-# Install production dependencies
-make install
-
-# Install development dependencies (includes testing tools)
-make install-dev
-```
-
-### Local Development
-
-```bash
-# Install dependencies
-poetry install
-
-# Run linting
-make lint
-
-# Format code
-make format
-
-# Run all quality checks (lint + test)
-make quality
-
-# Run tests
-make test
-
-# Run specific test types
-make test-unit        # Unit tests only
-make test-integration # Integration tests only
-make test-e2e         # End-to-end tests only
-
-# Clean up generated files
-make clean
-
-# Start development server (if available)
-python main.py
-```
-
-### Testing Strategy
-
-The application includes comprehensive tests following the testing pyramid:
-
-#### Test Structure
-
-- **Unit Tests**: Test individual components in isolation
-- **Integration Tests**: Test component interactions
-- **E2E Tests**: Test complete user journeys
-- **Contract Tests**: Verify API contracts
-
-#### Test Files
-
-- `tests/conftest.py`: Test fixtures and configuration
-- `tests/infrastructure/adapters/fastapi/test_fastapi.py`: Web layer tests
-- `tests/infrastructure/adapters/fastapi/test_agent_endpoints.py`: API endpoint tests
-- `tests/application/use_cases/test_google_agent_caller.py`: Use case tests
-
-#### Running Tests
-
-```bash
-# Install test dependencies
-poetry install
-
-# Run all tests
-make test
-
-# Run specific test types
-make test-unit
-make test-integration
-make test-e2e
-
-# Run tests with verbose output
-poetry run pytest -vv
-
-# Run specific test file
-poetry run pytest tests/infrastructure/adapters/fastapi/test_fastapi.py
-
-# Run tests in watch mode (requires pytest-watch)
-make watch-test
-```
-
-### Code Quality
-
-```bash
-# Run linting checks (ruff + mypy)
-make lint
-
-# Format code with ruff
-make format
-
-# Run all quality checks at once
-make quality
-
-# Format and lint in one command
-make check
-
-# Run full CI pipeline (format, lint, test)
-make ci
-```
-
-### Docker Development
-
-```bash
-# Build Docker image
-make docker-build
-
-# Run Docker container
-make docker-run
-
-# Run Docker container in development mode (with GCP credentials)
-make docker-run-dev
-```
-
-### Poetry Commands
-
-```bash
-# Activate poetry shell
-make poetry-shell
-
-# Show installed packages
-make poetry-show
-
-# Update dependencies
-make poetry-update
-
-# Generate/update poetry.lock
-make poetry-lock
-
-# Export requirements.txt
-make poetry-export
-```
-
-### Development Workflow
-
-1. **Setup**: `make install-dev`
-2. **Code**: Make your changes
-3. **Quality**: `make check` (format + lint)
-4. **Test**: `make test`
-5. **Clean**: `make clean` when done
-
-For faster development:
-- Use `make watch-test` to run tests automatically on file changes
+- Follow PEP 8 style guidelines
+- Write meaningful commit messages
+- Update documentation for new features
+- Add tests for new functionality
