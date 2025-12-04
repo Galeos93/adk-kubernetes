@@ -250,6 +250,9 @@ After infrastructure is ready:
 
 ### Destroying Infrastructure
 
+⚠️ **Warning**:
+- Before destroying the EKS clusterm you will need to remove the deployed application resources using the commands in the `deploy/` folder. Failing to do so may result in errors during the destruction process.
+
 To destroy all infrastructure while preserving critical resources:
 
 ```bash
