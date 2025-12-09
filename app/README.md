@@ -29,7 +29,7 @@ EOF
 # 3. Run in development mode
 make docker-run-dev
 
-# 4. Test the API
+# 4. Test the API works
 curl http://localhost:8080/health
 ```
 
@@ -99,9 +99,6 @@ Or use curl:
 ```bash
 # Health check
 curl http://localhost:8080/health
-
-# View API documentation
-open http://localhost:8080/docs
 ```
 
 ## 🧑‍💻 Development Guide

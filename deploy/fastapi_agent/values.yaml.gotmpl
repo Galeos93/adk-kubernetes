@@ -2,6 +2,7 @@
 agentService:
   image: "053132875787.dkr.ecr.us-west-2.amazonaws.com/fastapi-agent"
   tag: "latest"
+  replicas: 2
   env:
     GOOGLE_CLOUD_PROJECT: "agents-playground-474510"
     GOOGLE_CLOUD_LOCATION: "us-central1"

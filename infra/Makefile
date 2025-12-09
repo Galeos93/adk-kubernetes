@@ -1,4 +1,5 @@
-export SOPS_AGE_KEY_FILE=./key.txt
+# Get absolute path to key file
+SOPS_AGE_KEY_FILE := $(shell pwd)/key.txt
 
 # AWS profile to use (default: default)
 PROFILE ?= default
@@ -36,8 +37,8 @@ install-addons:
 
 deploy-infra:
 	@echo "Stage 1: Deploying infrastructure (excluding DNS A record)..."
-	$(eval DB_USER := $(shell sops -d --extract '["db_user"]' secrets.yaml))
-	$(eval DB_PASSWORD := $(shell sops -d --extract '["db_password"]' secrets.yaml))
+	$(eval DB_USER := $(shell SOPS_AGE_KEY_FILE=$(shell pwd)/key.txt sops -d --extract '["db_user"]' secrets.yaml))
+	$(eval DB_PASSWORD := $(shell SOPS_AGE_KEY_FILE=$(shell pwd)/key.txt sops -d --extract '["db_password"]' secrets.yaml))
 	@if [ -z "$(DB_USER)" ] || [ -z "$(DB_PASSWORD)" ]; then \
 		echo "❌ Error: Failed to extract database credentials from secrets.yaml"; \
 		echo "Make sure secrets.yaml is properly encrypted and SOPS_AGE_KEY_FILE is set"; \
@@ -116,8 +117,8 @@ deploy-infra:
 
 destroy-infra:
 	@echo "Destroying all infrastructure except Route 53 hosted zone and DNS records..."
-	$(eval DB_USER := $(shell sops -d --extract '["db_user"]' secrets.yaml))
-	$(eval DB_PASSWORD := $(shell sops -d --extract '["db_password"]' secrets.yaml))
+	$(eval DB_USER := $(shell SOPS_AGE_KEY_FILE=$(shell pwd)/key.txt sops -d --extract '["db_user"]' secrets.yaml))
+	$(eval DB_PASSWORD := $(shell SOPS_AGE_KEY_FILE=$(shell pwd)/key.txt sops -d --extract '["db_password"]' secrets.yaml))
 	# Step 1: Get ELB hostname before destroying Ingress
 	$(eval ELB_HOSTNAME := $(shell kubectl get ingress agent-ingress -n default -o jsonpath="{.status.loadBalancer.ingress[0].hostname}" 2>/dev/null || echo ""))
 	@echo "ELB hostname: $(ELB_HOSTNAME)"
