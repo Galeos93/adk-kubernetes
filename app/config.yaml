@@ -13,7 +13,7 @@ fastapi:
   workers: 1
 
 redis:
-  url: "redis://redis:6379"
+  url: null
 
 oauth:
   redirect_uri: "http://localhost:8000/auth/callback"

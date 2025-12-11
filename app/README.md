@@ -26,10 +26,13 @@ GOOGLE_APP_CLIENT_SECRET=your-client-secret
 REDIS_URL=redis://redis:6379
 EOF
 
-# 3. Run in development mode
+# 2. Build the Docker image
+make docker-build
+
+# 4. Run in development mode
 make docker-run-dev
 
-# 4. Test the API works
+# 5. Test the API works
 curl http://localhost:8080/health
 ```
 
