@@ -18,6 +18,7 @@ from google.adk.tools.application_integration_tool.application_integration_tools
     ApplicationIntegrationToolset,
 )
 from google.adk.tools.openapi_tool.auth.auth_helpers import dict_to_auth_scheme
+from vyper import v
 
 from infrastructure.adapters.gcp.google_agent_caller.gmail_agent.callbacks import (
     AfterToolCallback,
@@ -75,8 +76,8 @@ AUTH_SCHEME = configure_google_oauth2_data(
 AUTH_CREDENTIAL = AuthCredential(
     auth_type=AuthCredentialTypes.OAUTH2,
     oauth2=OAuth2Auth(
-        client_id=os.environ["GOOGLE_APP_CLIENT_ID"],
-        client_secret=os.environ["GOOGLE_APP_CLIENT_SECRET"],
+        client_id=v.get("google_app_client_id"),
+        client_secret=v.get("google_app_client_secret"),
     ),
 )
 

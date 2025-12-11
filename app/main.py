@@ -80,6 +80,11 @@ def load_vyper_config():
         v,
     )
 
+    v.set_default("fastapi.host", "0.0.0.0")
+    v.set_default("fastapi.port", 8000)
+    v.set_default("fastapi.log_level", "info")
+    v.set_default("fastapi.workers", 1)
+
 
 def configure_app():
     """Configure the FastAPI app with all dependencies using clean architecture."""
@@ -94,13 +99,9 @@ def configure_app():
     # Create OAuth2 authentication components
     # Use the global oauth_handler so it can be shared with the callback app
     oauth_handler = _oauth_handler
-    fastapi_port = v.get("fastapi.port") or 8000
-    redirect_uri = (
-        v.get(
-            "oauth.redirect_uri",
-        )
-        or f"http://localhost:{fastapi_port}/oauth/callback"
-    )
+    fastapi_port = v.get_int("fastapi.port")
+    v.set_default("oauth.redirect_uri", f"http://localhost:{fastapi_port}/oauth/callback")
+    redirect_uri = v.get("oauth.redirect_uri")
     auth_config_handler = AuthConfigHandler(
         auth_config=None,  # Will be set dynamically during agent execution
         oauth_handler=oauth_handler,
@@ -166,17 +167,17 @@ def main():
     print("   - Main API available at /")
     print("   - OAuth2 Callback available at /oauth/callback")
 
-    fastapi_host = v.get("fastapi.host") or "0.0.0.0"
-    fastapi_port = v.get("fastapi.port") or 8000
-    fastapi_log_level = v.get("fastapi.log_level") or "info"
-    fastapi_workers = v.get("fastapi.workers") or 1
+    fastapi_host = v.get_string("fastapi.host")
+    fastapi_port = v.get_int("fastapi.port")
+    fastapi_log_level = v.get_string("fastapi.log_level")
+    fastapi_workers = v.get_int("fastapi.workers")
 
     # Start the server using the module-level app
     uvicorn.run(
         "main:app",
-        workers=int(fastapi_workers),
+        workers=fastapi_workers,
         host=fastapi_host,
-        port=int(fastapi_port),
+        port=fastapi_port,
         log_level=fastapi_log_level,
         timeout_worker_healthcheck=60,
     )

@@ -11,3 +11,9 @@ fastapi:
   port: 80
   log_level: "INFO"
   workers: 1
+
+redis:
+  url: "redis://redis:6379"
+
+oauth:
+  redirect_uri: "http://localhost:8000/auth/callback"
